@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <OutputPath>bin\Verification\</OutputPath>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="src\Routing\**\*.cs" />
+    <Compile Include="src\Verification\RouteVerification.cs" />
+    <Compile Include="src\Verification\RoutePolicyVerification.cs" />
+    <Compile Include="src\Verification\RouteSnapVerification.cs" />
+    <Compile Include="src\Verification\PipeSectionVerification.cs" />
+    <Compile Include="src\Verification\PresentationRoutes.cs" />
+    <Compile Include="src\Interaction\PipeEditState.cs" />
+    <Compile Include="src\Interaction\PipeToolVisibility.cs" />
+    <Compile Include="src\UI\ToolbarLayout.cs" />
+    <Compile Include="src\UI\ToolbarNode.cs" />
+    <EmbeddedResource Include="Assets\UI\PipeWrenchToolbar.kingdom-ui.json" LogicalName="KingdomPipeWrench.Toolbar.json" />
+    <Reference Include="Foundation"><HintPath>..\Foundation\Release\Foundation.dll</HintPath></Reference>
+    <Reference Include="Assembly-CSharp"><HintPath>..\..\KingdomInc_Data\Managed\Assembly-CSharp.dll</HintPath></Reference>
+    <Compile Include="src\Interaction\PipeSectionPlan.cs" />
+    <Compile Include="src\Interaction\PipeSectionPicker.cs" />
+    <Compile Include="src\Interaction\SessionGrabbers.cs" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,231 @@
+{
+  "version": 1,
+  "name": "Pipe Wrench - Narrow routing toolbar",
+  "width": 1280,
+  "height": 320,
+  "background": "#171814",
+  "nodes": [
+    {
+      "id": "e_e8b4f1b9-be3e-4358-b85a-596cb428597c",
+      "type": "group",
+      "name": "Pipe Wrench toolbar",
+      "x": 24,
+      "y": 130,
+      "w": 568,
+      "h": 53,
+      "opacity": 1,
+      "children": [
+        {
+          "id": "e_56c1b808-365d-4327-94f0-29489be9c6c4",
+          "type": "sprite",
+          "name": "ItemSlotMini",
+          "x": 0,
+          "y": 0,
+          "w": 568,
+          "h": 53,
+          "opacity": 1,
+          "asset": "sharedassets0.assets:41",
+          "slice": true,
+          "pixelScale": 2,
+          "hidden": false
+        },
+        {
+          "id": "e_f80ad65c-40d6-4c2b-b4d4-befe5964693c",
+          "type": "text",
+          "name": "PIPE WRENCH",
+          "x": 9,
+          "y": 7.361111111111105,
+          "w": 124,
+          "h": 39,
+          "opacity": 1,
+          "text": "Pipe Wrench",
+          "font": "pixel",
+          "fontSize": 12.249614791987671,
+          "color": "#e7c685",
+          "align": "center",
+          "verticalAlign": "middle"
+        },
+        {
+          "id": "e_42f8e302-d57a-412a-abaf-bbf0b178bea4",
+          "type": "group",
+          "name": "Rule - Buildings",
+          "x": 140,
+          "y": 5.8888888888888875,
+          "w": 100,
+          "h": 44,
+          "opacity": 1,
+          "children": [
+            {
+              "id": "e_9615a39a-959c-4611-9c6c-850c381532c3",
+              "type": "sprite",
+              "name": "DecoRectLight",
+              "x": 0,
+              "y": 0,
+              "w": 100,
+              "h": 44,
+              "opacity": 1,
+              "asset": "sharedassets1.assets:184",
+              "slice": true,
+              "pixelScale": 2
+            },
+            {
+              "id": "e_6afecd6e-d563-41a0-94c3-c521ce45a925",
+              "type": "text",
+              "name": "Buildings",
+              "x": 15,
+              "y": 9.944444444444445,
+              "w": 73,
+              "h": 26,
+              "opacity": 1,
+              "text": "Buildings",
+              "font": "sans",
+              "fontSize": 17,
+              "color": "#241e1b",
+              "align": "center",
+              "verticalAlign": "middle"
+            }
+          ]
+        },
+        {
+          "id": "e_beb346b8-bf45-40b6-8278-b440151939e7",
+          "type": "group",
+          "name": "Rule - Overlap",
+          "x": 244,
+          "y": 5.8888888888888875,
+          "w": 92,
+          "h": 44,
+          "opacity": 1,
+          "children": [
+            {
+              "id": "e_a5e01e0c-b64d-4842-a572-14d9b941ad89",
+              "type": "sprite",
+              "name": "DecoRectDark",
+              "x": 0,
+              "y": 0,
+              "w": 92,
+              "h": 44,
+              "opacity": 1,
+              "asset": "sharedassets1.assets:142",
+              "slice": true,
+              "pixelScale": 2
+            },
+            {
+              "id": "e_1a53e334-e37d-4276-9054-e36fc289bdb1",
+              "type": "text",
+              "name": "Overlap",
+              "x": 17,
+              "y": 9.944444444444445,
+              "w": 64,
+              "h": 26,
+              "opacity": 1,
+              "text": "Overlap",
+              "font": "sans",
+              "fontSize": 17,
+              "color": "#e8e0cf",
+              "align": "center",
+              "verticalAlign": "middle"
+            }
+          ]
+        },
+        {
+          "id": "e_cebb17ad-d049-4b8a-b079-cc4fc1d4b702",
+          "type": "group",
+          "name": "Rule - Both",
+          "x": 340,
+          "y": 5.8888888888888875,
+          "w": 72,
+          "h": 44,
+          "opacity": 1,
+          "children": [
+            {
+              "id": "e_4ec92273-64b2-404c-b763-e2fd5369dc97",
+              "type": "sprite",
+              "name": "DecoRectDark",
+              "x": 0,
+              "y": 0,
+              "w": 72,
+              "h": 44,
+              "opacity": 1,
+              "asset": "sharedassets1.assets:142",
+              "slice": true,
+              "pixelScale": 2
+            },
+            {
+              "id": "e_6b535393-a0c7-4163-aef5-55767051c2a8",
+              "type": "text",
+              "name": "Both",
+              "x": 19,
+              "y": 7.944444444444445,
+              "w": 39,
+              "h": 26,
+              "opacity": 1,
+              "text": "Both",
+              "font": "sans",
+              "fontSize": 17,
+              "color": "#e8e0cf",
+              "align": "center",
+              "verticalAlign": "middle"
+            }
+          ]
+        },
+        {
+          "id": "e_f8f4325a-09ab-41c7-b03c-d41c7162cddc",
+          "type": "group",
+          "name": "Rule - Strict",
+          "x": 416,
+          "y": 5.8888888888888875,
+          "w": 72,
+          "h": 44,
+          "opacity": 1,
+          "children": [
+            {
+              "id": "e_755b9b4b-8d37-4d49-9703-359b78069524",
+              "type": "sprite",
+              "name": "DecoRectDark",
+              "x": 0,
+              "y": 0,
+              "w": 72,
+              "h": 44,
+              "opacity": 1,
+              "asset": "sharedassets1.assets:142",
+              "slice": true,
+              "pixelScale": 2
+            },
+            {
+              "id": "e_0a61f858-ecb4-46b6-a93f-5e15cc36c2ee",
+              "type": "text",
+              "name": "Strict",
+              "x": 17,
+              "y": 7.944444444444445,
+              "w": 43,
+              "h": 26,
+              "opacity": 1,
+              "text": "Strict",
+              "font": "sans",
+              "fontSize": 17,
+              "color": "#e8e0cf",
+              "align": "center",
+              "verticalAlign": "middle"
+            }
+          ]
+        },
+        {
+          "id": "e_07d08501-63e6-46ae-a7d2-30a3e4c38ddc",
+          "type": "text",
+          "name": "SHIFT",
+          "x": 509,
+          "y": 15.361111111111105,
+          "w": 50,
+          "h": 24,
+          "opacity": 1,
+          "text": "Shift",
+          "font": "pixel",
+          "fontSize": 16,
+          "color": "#c5ab7b",
+          "align": "center",
+          "verticalAlign": "middle"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+<Project>
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'PipeWrench.Verification'">
+    <BaseIntermediateOutputPath>obj\Verification\</BaseIntermediateOutputPath>
+  </PropertyGroup>
+</Project>
