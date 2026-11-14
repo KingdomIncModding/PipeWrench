@@ -12,13 +12,13 @@
     "branch": "main",
     "visibility": "public",
     "topics": [],
-    "latestTag": null
+    "latestTag": "v0.1.8"
   },
   "distribution": {
     "nexus": {
       "game": "kingdominc",
       "modId": 28,
-      "fileId": null,
+      "fileId": 8382639,
       "url": "https://www.nexusmods.com/kingdominc/mods/28",
       "requirements": [
         {
@@ -38,8 +38,8 @@
         "AI-Generated Content",
         "AI Media"
       ],
-      "tagsVerified": false,
-      "requirementsVerified": false
+      "tagsVerified": true,
+      "requirementsVerified": true
     }
   },
   "development": {
@@ -52,7 +52,7 @@
     ]
   },
   "publishing": {
-    "githubReleases": false,
+    "githubReleases": "https://github.com/KingdomIncModding/PipeWrench/releases/tag/v0.1.8",
     "nexusMods": "https://www.nexusmods.com/kingdominc/mods/28"
   }
 }
