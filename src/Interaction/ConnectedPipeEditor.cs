@@ -73,15 +73,15 @@ namespace KingdomPipeWrench.Interaction
         {
             var startPort = startsAtInput ? pipe.ConnectedInput : pipe.ConnectedOutput;
             var endPort = startsAtInput ? pipe.ConnectedOutput : pipe.ConnectedInput;
-            var start = fixedNodes.Count > 0 ? fixedNodes[fixedNodes.Count - 1] : WorkspaceGeometry.Point(FoundationApi.PipeDrag.ConnectionPoint(startPort));
-            var end = WorkspaceGeometry.Point(FoundationApi.PipeDrag.ConnectionPoint(endPort));
+            var start = fixedNodes.Count > 0 ? fixedNodes[fixedNodes.Count - 1] : WorkspaceGeometry.Point(OptionalIntegrations.ConnectionPoint(startPort));
+            var end = WorkspaceGeometry.Point(OptionalIntegrations.ConnectionPoint(endPort));
             var nodes = new List<RoutePoint>(fixedNodes);
             int count = 0;
             if (state.Shape != RouteShape.Freeform)
             {
-                int from = fixedNodes.Count == 0 ? FoundationApi.PipeDrag.OutwardDirection(startPort) : 0;
-                int to = FoundationApi.PipeDrag.OutwardDirection(endPort);
-                var terminalStart = WorkspaceGeometry.Point(FoundationApi.PipeDrag.ConnectionPoint(startPort));
+                int from = fixedNodes.Count == 0 ? OptionalIntegrations.OutwardDirection(startPort) : 0;
+                int to = OptionalIntegrations.OutwardDirection(endPort);
+                var terminalStart = WorkspaceGeometry.Point(OptionalIntegrations.ConnectionPoint(startPort));
                 var constraints = WorkspaceGeometry.Constraints(pipe, plugin.Avoidance.Value, plugin.Clearance.Value, terminalStart, end);
                 var route = ObstacleRouter.Find(start, end, from, to, state.Shape, constraints);
                 if (route == null) { FoundationApi.UiAccess.ShowPointerWarning("Pipe Wrench: no clear route. The current pipe was kept."); return; }
@@ -93,7 +93,11 @@ namespace KingdomPipeWrench.Interaction
             }
             var values = nodes.Select(WorkspaceGeometry.Vector).ToList();
             if (startsAtInput) values.Reverse();
-            pipe.SetNodes(values); FoundationApi.WorkspaceVisuals.RefreshPipe(pipe.World);
+            OptionalIntegrations.RunUndoEdit(() =>
+            {
+                pipe.SetNodes(values);
+                FoundationApi.WorkspaceVisuals.RefreshPipe(pipe.World);
+            });
             plugin.Managed.Add(pipe);
             FoundationApi.UiAccess.ShowStatusMessage("Pipe Wrench: " + RouteModes.Label(state.Shape)
                 + (state.Shape == RouteShape.Freeform ? "" : " — " + count + " bends") + "; P cycles modes; click away to finish");

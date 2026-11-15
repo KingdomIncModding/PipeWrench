@@ -88,19 +88,19 @@ namespace KingdomPipeWrench.Interaction
             if (plugin.IsPointerOverToolbar)
             { if (previewNodes != null) { WriteNodes(previewNodes, previewEndpoint); Tint(blocked); } return; }
             var target = drag.HoveredPort;
-            var endpoint = target != null ? FoundationApi.PipeDrag.ConnectionPoint(target) : FoundationApi.UiAccess.MouseWorld;
+            var endpoint = target != null ? OptionalIntegrations.ConnectionPoint(target) : FoundationApi.UiAccess.MouseWorld;
             if (target == null && shape != RouteShape.Freeform && Keyboard.current?.ctrlKey.isPressed == true)
                 endpoint = FoundationApi.NativeIO.SnapRouteNode(endpoint);
             if (shape == RouteShape.Freeform)
             {
                 WriteNodes(fixedNodes, endpoint); Tint(false); blocked = false; return;
             }
-            var start = fixedNodes.Count == 0 ? WorkspaceGeometry.Point(FoundationApi.PipeDrag.ConnectionPoint(drag.Start)) : fixedNodes[fixedNodes.Count - 1];
+            var start = fixedNodes.Count == 0 ? WorkspaceGeometry.Point(OptionalIntegrations.ConnectionPoint(drag.Start)) : fixedNodes[fixedNodes.Count - 1];
             var end = WorkspaceGeometry.Point(endpoint);
-            int startDirection = fixedNodes.Count == 0 ? FoundationApi.PipeDrag.OutwardDirection(drag.Start) : 0;
-            int endDirection = target != null ? FoundationApi.PipeDrag.OutwardDirection(target) : 0;
+            int startDirection = fixedNodes.Count == 0 ? OptionalIntegrations.OutwardDirection(drag.Start) : 0;
+            int endDirection = target != null ? OptionalIntegrations.OutwardDirection(target) : 0;
             var mode = plugin.Avoidance.Value;
-            var terminalStart = WorkspaceGeometry.Point(FoundationApi.PipeDrag.ConnectionPoint(drag.Start));
+            var terminalStart = WorkspaceGeometry.Point(OptionalIntegrations.ConnectionPoint(drag.Start));
             if (constraints == null || constraintMode != mode || committing)
             { constraints = WorkspaceGeometry.Constraints(pipe, mode, plugin.Clearance.Value, terminalStart, end); constraintMode = mode; cacheKey = null; }
             else if (constraints.End != end)

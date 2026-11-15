@@ -2,17 +2,30 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <LangVersion>latest</LangVersion>
-    <Version>0.1.8</Version>
+    <Version>0.1.9</Version>
     <AssemblyName>PipeWrench</AssemblyName>
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
     <EnableDefaultItems>false</EnableDefaultItems>
     <GameRoot Condition="'$(GameRoot)' == ''">$(MSBuildThisFileDirectory)..\..\</GameRoot>
-    <FoundationDll Condition="'$(FoundationDll)' == ''">$(MSBuildThisFileDirectory)..\Foundation\Release\Foundation.dll</FoundationDll>
+    <FoundationDll Condition="'$(FoundationDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\Foundation\Release\Foundation.dll')">$(MSBuildThisFileDirectory)..\Foundation\Release\Foundation.dll</FoundationDll>
+    <FoundationDll Condition="'$(FoundationDll)' == ''">$(GameRoot)BepInEx\plugins\Foundation\Foundation.dll</FoundationDll>
+    <UndoDll Condition="'$(UndoDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\Undo\Release\Undo.dll')">$(MSBuildThisFileDirectory)..\Undo\Release\Undo.dll</UndoDll>
+    <UndoDll Condition="'$(UndoDll)' == '' And Exists('$(GameRoot)BepInEx\plugins\Undo\Undo.dll')">$(GameRoot)BepInEx\plugins\Undo\Undo.dll</UndoDll>
+    <PortLayoutsDll Condition="'$(PortLayoutsDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\PortLayouts\Release\PortLayouts.dll')">$(MSBuildThisFileDirectory)..\PortLayouts\Release\PortLayouts.dll</PortLayoutsDll>
+    <PortLayoutsDll Condition="'$(PortLayoutsDll)' == '' And Exists('$(GameRoot)BepInEx\plugins\PortLayouts\PortLayouts.dll')">$(GameRoot)BepInEx\plugins\PortLayouts\PortLayouts.dll</PortLayoutsDll>
+    <RightClickFixDll Condition="'$(RightClickFixDll)' == '' And Exists('$(MSBuildThisFileDirectory)..\RightClickFix\Release\RightClickFix.dll')">$(MSBuildThisFileDirectory)..\RightClickFix\Release\RightClickFix.dll</RightClickFixDll>
+    <RightClickFixDll Condition="'$(RightClickFixDll)' == '' And Exists('$(GameRoot)BepInEx\plugins\RightClickFix\RightClickFix.dll')">$(GameRoot)BepInEx\plugins\RightClickFix\RightClickFix.dll</RightClickFixDll>
+    <DefineConstants Condition="'$(UndoDll)' != '' And Exists('$(UndoDll)')">$(DefineConstants);HAS_UNDO</DefineConstants>
+    <DefineConstants Condition="'$(PortLayoutsDll)' != '' And Exists('$(PortLayoutsDll)')">$(DefineConstants);HAS_PORTLAYOUTS</DefineConstants>
+    <DefineConstants Condition="'$(RightClickFixDll)' != '' And Exists('$(RightClickFixDll)')">$(DefineConstants);HAS_RIGHTCLICKFIX</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="src\**\*.cs" Exclude="src\Verification\**\*.cs" />
     <EmbeddedResource Include="Assets\UI\PipeWrenchToolbar.kingdom-ui.json" LogicalName="KingdomPipeWrench.Toolbar.json" />
     <Reference Include="Foundation"><HintPath>$(FoundationDll)</HintPath><Private>false</Private></Reference>
+    <Reference Include="Undo" Condition="'$(UndoDll)' != '' And Exists('$(UndoDll)')"><HintPath>$(UndoDll)</HintPath><Private>false</Private></Reference>
+    <Reference Include="PortLayouts" Condition="'$(PortLayoutsDll)' != '' And Exists('$(PortLayoutsDll)')"><HintPath>$(PortLayoutsDll)</HintPath><Private>false</Private></Reference>
+    <Reference Include="RightClickFix" Condition="'$(RightClickFixDll)' != '' And Exists('$(RightClickFixDll)')"><HintPath>$(RightClickFixDll)</HintPath><Private>false</Private></Reference>
     <Reference Include="BepInEx"><HintPath>$(GameRoot)BepInEx\core\BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine"><HintPath>$(GameRoot)KingdomInc_Data\Managed\UnityEngine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameRoot)KingdomInc_Data\Managed\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>

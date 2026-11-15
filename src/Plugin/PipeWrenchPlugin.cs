@@ -11,10 +11,13 @@ using UnityEngine.InputSystem;
 namespace KingdomPipeWrench.Plugin
 {
     [BepInPlugin(Id, "Pipe Wrench", Version)]
-    [BepInDependency("urakka.kingdominc.foundation", "0.14.3")]
+    [BepInDependency("urakka.kingdominc.foundation", "0.14.4")]
+    [BepInDependency("urakka.kingdominc.portlayouts", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("urakka.kingdominc.undo", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("urakka.kingdominc.rightclickfix", BepInDependency.DependencyFlags.SoftDependency)]
     public sealed class PipeWrenchPlugin : BaseUnityPlugin
     {
-        public const string Id = "urakka.kingdominc.pipewrench", Version = "0.1.8";
+        public const string Id = "urakka.kingdominc.pipewrench", Version = "0.1.9";
         internal ConfigEntry<bool> Enabled, ShowHandles;
         internal ConfigEntry<Key> RouteKey, IncreaseBendsKey, DecreaseBendsKey;
         internal ConfigEntry<int> Clearance, PreferredBends;
@@ -54,11 +57,15 @@ namespace KingdomPipeWrench.Plugin
             handles = new PipeHandleManager(this, editor);
             inserter = new GrabInserter(this, handles, editor);
             toolbar = new PipeToolbar(this);
+            var rcfHook = OptionalIntegrations.RegisterRightClickConsumer(Id, () => ShowTools && ((handles?.ShouldClaimRightClick() == true) || (inserter?.IsActive == true)));
+            if (rcfHook != null)
+                foundation.Own(rcfHook);
             Logger.LogInfo("Pipe Wrench " + Version + " loaded: default right angles; persistent pipe editing; P cycles modes; Alt+P inserts session-only sliders.");
         }
         private void LateUpdate()
         {
-            ReadAvoidanceInput();
+            if (ShowTools || handles?.Active != null)
+                ReadAvoidanceInput();
             routing?.Tick();
             inserter?.Tick();
             if (editor != null && handles != null) editor.Tick(handles.IsPointerOverMarker() || IsPointerOverToolbar, handles.Active != null);

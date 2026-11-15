@@ -19,14 +19,21 @@ namespace KingdomPipeWrench.Handles
         private WorkspacePipe shown;
         private int nodeCount;
         private float nextSearch;
+        private bool claimingRightClickUntilRelease;
         internal PipeGrabMarker Active;
         internal PipeWrenchPlugin Plugin => plugin;
         public PipeHandleManager(PipeWrenchPlugin plugin, ConnectedPipeEditor editor) { this.plugin = plugin; this.editor = editor; }
 
         internal bool IsPointerOverMarker()
         {
-            if (EventSystem.current == null || Mouse.current == null
+            if (Mouse.current == null
                 || !Mouse.current.leftButton.wasPressedThisFrame && !Mouse.current.rightButton.wasPressedThisFrame) return false;
+            return IsPointerOverActiveMarker();
+        }
+
+        internal bool IsPointerOverActiveMarker()
+        {
+            if (EventSystem.current == null || Mouse.current == null || markers.Count == 0) return false;
             var hits = new List<RaycastResult>();
             var pointer = new PointerEventData(EventSystem.current) { position = Mouse.current.position.ReadValue() };
             EventSystem.current.RaycastAll(pointer, hits);
@@ -38,8 +45,12 @@ namespace KingdomPipeWrench.Handles
             return false;
         }
 
+        internal bool ShouldClaimRightClick() => claimingRightClickUntilRelease || IsPointerOverActiveMarker();
+
         public void Tick()
         {
+            if (claimingRightClickUntilRelease && (Mouse.current == null || (!Mouse.current.rightButton.isPressed && !Mouse.current.rightButton.wasReleasedThisFrame)))
+                claimingRightClickUntilRelease = false;
             if (!plugin.Enabled.Value || !plugin.ShowHandles.Value || !FoundationApi.UiAccess.IsWorkspaceVisible
                 || !FoundationApi.UiAccess.IsGameInputEnabled || FoundationApi.UiAccess.IsMenuVisible)
             { Clear(); return; }
@@ -134,6 +145,7 @@ namespace KingdomPipeWrench.Handles
         internal void BeginEdit(WorkspacePipe pipe) => editor.SelectExisting(pipe);
         internal void Remove(PipeGrabMarker marker, WorkspacePipe pipe)
         {
+            claimingRightClickUntilRelease = true;
             marker.OnDragDropCancel();
             plugin.Managed.HideMarker(pipe, marker.Segment);
             markers.Remove(marker); marker.gameObject.SetActive(false); UnityEngine.Object.Destroy(marker.gameObject);

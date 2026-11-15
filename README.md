@@ -35,7 +35,7 @@ Building avoidance leaves a small clearance. Pipe overlap means a shared length 
 
 ## Requirements and Installation
 
-For Kingdom Inc **1.0.14**, with **BepInEx 5** and [Foundation **0.14.3 or later**](https://www.nexusmods.com/kingdominc/mods/18). Snappy is optional; its finer grid is used after its research is unlocked.
+For Kingdom Inc **1.0.14**, with **BepInEx 5** and [Foundation **0.14.4 or later**](https://www.nexusmods.com/kingdominc/mods/18). Snappy is optional; its finer grid is used after its research is unlocked. Port Layouts, Undo, and Right Click Fix are also optionally supported when installed.
 
 Close the game before installing. Extract the Pipe Wrench download into your game folder so `PipeWrench.dll` and its `mod.json` are in `BepInEx/plugins/PipeWrench/`. Install or update Foundation separately in `BepInEx/plugins/Foundation/`.
 

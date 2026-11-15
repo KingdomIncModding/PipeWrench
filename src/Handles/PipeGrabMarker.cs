@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using KingdomFoundation.Api;
 using KingdomPipeWrench.Interaction;
+using KingdomPipeWrench.Plugin;
 using KingdomPipeWrench.Routing;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -20,6 +22,7 @@ namespace KingdomPipeWrench.Handles
         private bool moved;
         private bool dragging;
         private bool removed;
+        private IDisposable undoScope;
         internal int Segment { get; private set; }
         internal void Initialize(PipeHandleManager manager, WorkspacePipe pipe, int segment)
         { this.manager = manager; this.pipe = pipe; Segment = segment; }
@@ -44,7 +47,12 @@ namespace KingdomPipeWrench.Handles
             if (plan == null) { FoundationApi.UiAccess.ShowPointerWarning("Pipe Wrench: this section has no room for corners on the current snap grid."); return; }
             moved = false;
             dragging = true; manager.Active = this;
-            if (!FoundationApi.DragDrop.SetTarget(this, hold)) { dragging = false; manager.Active = null; return; }
+            undoScope = OptionalIntegrations.OpenUndoEditScope();
+            if (!FoundationApi.DragDrop.SetTarget(this, hold))
+            {
+                undoScope?.Dispose(); undoScope = null;
+                dragging = false; manager.Active = null; return;
+            }
             manager.BeginEdit(pipe);
             FoundationApi.UiAccess.ShowStatusMessage("Pipe Wrench: slide " + (plan.Vertical ? "left / right" : "up / down") + " — Escape cancels; right-click removes the slider");
         }
@@ -80,6 +88,7 @@ namespace KingdomPipeWrench.Handles
             if (!dragging) return;
             if (moved && pipe?.World != null)
             { manager.Plugin.Managed.Remap(pipe, plan); Segment = plan.Segment; }
+            undoScope?.Dispose(); undoScope = null;
             dragging = false; manager.Finished();
         }
 
@@ -90,8 +99,15 @@ namespace KingdomPipeWrench.Handles
             {
                 pipe.SetNodes(original.Select(WorkspaceGeometry.Vector)); FoundationApi.WorkspaceVisuals.RefreshPipe(pipe.World);
             }
+            undoScope?.Dispose(); undoScope = null;
             if (ReferenceEquals(FoundationApi.DragDrop.Target, this)) FoundationApi.DragDrop.Clear();
             dragging = false; manager.Finished();
+        }
+
+        private void OnDestroy()
+        {
+            undoScope?.Dispose();
+            undoScope = null;
         }
         public void OnPointerEnter(PointerEventData data) => GetComponent<Image>().color = new Color(0.75f, 0.52f, 0.15f, 1);
         public void OnPointerExit(PointerEventData data) => GetComponent<Image>().color = new Color(0.24f, 0.19f, 0.09f, 0.95f);
