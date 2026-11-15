@@ -12,7 +12,7 @@
     "branch": "main",
     "visibility": "public",
     "topics": [],
-    "latestTag": "v0.1.8"
+    "latestTag": "v0.1.9"
   },
   "distribution": {
     "nexus": {
@@ -52,7 +52,7 @@
     ]
   },
   "publishing": {
-    "githubReleases": "https://github.com/KingdomIncModding/PipeWrench/releases/tag/v0.1.8",
+    "githubReleases": "https://github.com/KingdomIncModding/PipeWrench/releases/tag/v0.1.9",
     "nexusMods": "https://www.nexusmods.com/kingdominc/mods/28",
     "archivePreviousReleases": false
   }
