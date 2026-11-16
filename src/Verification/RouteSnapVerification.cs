@@ -45,6 +45,14 @@ namespace KingdomPipeWrench.Verification
                 var moved = plan.Move(snap.NextY(start.Y, -1));
                 check(moved.All(p => snap.X(p.X) == p.X && snap.Y(p.Y) == p.Y), "Inserted slider corners follow the active grid " + step);
                 check(moved.First() == straight[0] && moved.Last() == straight[1], "Slider snapping retains both ports " + step);
+                var shortHorizontal = new[] { new RoutePoint(208, -232), new RoutePoint(272, -232) };
+                var shortPlan = PipeSectionPlan.Create(shortHorizontal, -1, snap);
+                check(shortPlan != null && shortPlan.Move(snap.NextY(-232, 1)).First() == shortHorizontal[0], "Short horizontal pipe still slides on " + step + " grid");
+                var offGridVertical = new[] { new RoutePoint(0, 0), new RoutePoint(0, 160) };
+                var verticalPlan = PipeSectionPlan.Create(offGridVertical, -1, snap);
+                check(verticalPlan != null && verticalPlan.Coordinate == 0, "Off-grid vertical pipe preserves its actual X coordinate on " + step + " grid");
+                var closeSnapFacing = RouteGeometry.Basic(new RoutePoint(208, 24), new RoutePoint(224, -104), 1, -1, RouteShape.Center, snap);
+                check(RouteBendPlanner.Count(closeSnapFacing) == 2, "Close snapped facing ports stay at 2 elbows on " + step + " grid");
             }
         }
     }

@@ -8,13 +8,13 @@ namespace KingdomPipeWrench.Verification
     {
         public static void Run(Action<bool, string> check)
         {
-            var mode = AvoidanceMode.Buildings;
-            foreach (var expected in new[] { AvoidanceMode.Overlap, AvoidanceMode.BuildingsAndOverlap, AvoidanceMode.Strict, AvoidanceMode.Buildings })
+            var mode = AvoidanceMode.None;
+            foreach (var expected in new[] { AvoidanceMode.Buildings, AvoidanceMode.Overlap, AvoidanceMode.BuildingsAndOverlap, AvoidanceMode.Strict, AvoidanceMode.None })
             { mode = AvoidanceRules.Next(mode); check(mode == expected, "Shift avoidance order: " + expected); }
             foreach (AvoidanceMode rule in Enum.GetValues(typeof(AvoidanceMode)))
             {
-                check(AvoidanceRules.Buildings(rule) == (rule != AvoidanceMode.Overlap), "Building policy: " + rule);
-                check(AvoidanceRules.Overlap(rule) == (rule != AvoidanceMode.Buildings), "Overlap policy: " + rule);
+                check(AvoidanceRules.Buildings(rule) == (rule == AvoidanceMode.Buildings || rule == AvoidanceMode.BuildingsAndOverlap || rule == AvoidanceMode.Strict), "Building policy: " + rule);
+                check(AvoidanceRules.Overlap(rule) == (rule == AvoidanceMode.Overlap || rule == AvoidanceMode.BuildingsAndOverlap || rule == AvoidanceMode.Strict), "Overlap policy: " + rule);
                 check(AvoidanceRules.Crossings(rule) == (rule == AvoidanceMode.Strict), "Crossing policy: " + rule);
             }
             var start = new RoutePoint(0, 0); var end = new RoutePoint(320, 0);
@@ -60,7 +60,7 @@ namespace KingdomPipeWrench.Verification
                     AvoidanceRules.Crossings(policy), start, end);
                 var result = ObstacleRouter.Find(start, end, 1, -1, RouteShape.Center, constraints);
                 check(result != null && constraints.IsClear(result), "Combined building/pipe layout follows " + policy);
-                if (policy == AvoidanceMode.Overlap) check(result.Count == 2, "Overlap-only mode can cross the building and perpendicular pipe");
+                if (policy == AvoidanceMode.None || policy == AvoidanceMode.Overlap) check(result.Count == 2, policy + " mode can cross the building and perpendicular pipe");
             }
 
             var rng = new Random(48174);

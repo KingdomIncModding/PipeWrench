@@ -35,8 +35,8 @@ namespace KingdomPipeWrench.Interaction
             if (!whole && CanMoveCorners(path, index))
                 return new PipeSectionPlan(path.ToList(), index, selected, 0, index - 1, 4, false);
 
-            int midpoint = a.X + (b.X - a.X) / 2;
-            if (snap != null) midpoint = snap.X(midpoint);
+            int midpoint = a.X == b.X ? a.X : a.X + (b.X - a.X) / 2;
+            if (snap != null && a.X != b.X) midpoint = snap.X(midpoint);
             var nodes = a.Y == b.Y ? RouteGeometry.StraightSlideNodes(a, b, snap)
                 : new List<RoutePoint> { new RoutePoint(midpoint, a.Y), new RoutePoint(midpoint, b.Y) };
             if (nodes == null) return null;

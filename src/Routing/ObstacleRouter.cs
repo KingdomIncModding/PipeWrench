@@ -35,8 +35,9 @@ namespace KingdomPipeWrench.Routing
         {
             if (constraints.Snap != null)
             {
-                var point = new RoutePoint(direction == 0 ? port.X : constraints.Snap.BeyondX(port.X + direction, direction), port.Y);
-                return constraints.IsClear(new[] { port, point }) ? point : (RoutePoint?)null;
+                var snapped = new RoutePoint(direction == 0 ? port.X : constraints.Snap.BeyondX(port.X + direction, direction), port.Y);
+                if (constraints.IsClear(new[] { port, snapped })) return snapped;
+                if (direction == 0) return null;
             }
             foreach (int length in new[] { 24, 16, 8, 4, 1 })
             {
@@ -100,7 +101,7 @@ namespace KingdomPipeWrench.Routing
                 closed[state] = true;
                 int cell = state / 2, axis = state % 2, ix = cell % width, iy = cell / width;
                 var here = new RoutePoint(x[ix], y[iy]);
-                if (state / 2 == target / 2 && (endDirection == 0 || axis == 1 || source == target))
+                if (state / 2 == target / 2 && CanFinish(state, axis, source, target, endDirection, previous, x, width))
                     return Reconstruct(state, previous, x, y);
                 for (int direction = 0; direction < 4; direction++)
                 {
@@ -108,19 +109,28 @@ namespace KingdomPipeWrench.Routing
                     int ny = iy + (direction == 2 ? -1 : direction == 3 ? 1 : 0);
                     int nextAxis = direction < 2 ? 0 : 1;
                     if (nx < 0 || ny < 0 || nx >= width || ny >= y.Length) continue;
-                    if (state == source && startDirection != 0 && nextAxis == 0) continue;
+                    if (state == source && startDirection != 0 && nextAxis == 0 && (x[nx] - x[ix]) * startDirection <= 0) continue;
                     var next = new RoutePoint(x[nx], y[ny]);
                     if (!grid.IsClear(ix, iy, nx, ny)) continue;
                     int nextState = (ny * width + nx) * 2 + nextAxis;
                     double distance = RoutePoint.Distance(here, next);
-                    double preference = nextAxis == 1 ? distance * Math.Abs((double)here.X - preferredX) / (64 + Math.Abs((double)end.X - start.X)) * 0.08 : 0;
-                    double value = cost[state] + distance + (axis != nextAxis ? 24 : 0) + preference;
+                    double preference = nextAxis == 1 ? distance * Math.Abs((double)here.X - preferredX) / (64 + Math.Abs((double)end.X - start.X)) * 0.04 : 0;
+                    double value = cost[state] + distance + (axis != nextAxis ? 48 : 0) + preference;
                     if (value >= cost[nextState]) continue;
                     cost[nextState] = value; previous[nextState] = state;
                     queue.Push(nextState, value + RoutePoint.Distance(next, end));
                 }
             }
             return null;
+        }
+
+        private static bool CanFinish(int state, int axis, int source, int target, int endDirection, int[] previous, int[] x, int width)
+        {
+            if (endDirection == 0 || axis == 1 || state == source || source == target) return true;
+            int prev = previous[state];
+            if (prev < 0) return false;
+            int prevX = x[(prev / 2) % width], hereX = x[(target / 2) % width];
+            return (long)(prevX - hereX) * endDirection > 0;
         }
 
         private static List<RoutePoint> Reconstruct(int state, int[] previous, int[] x, int[] y)

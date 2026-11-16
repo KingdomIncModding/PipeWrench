@@ -22,6 +22,8 @@ namespace KingdomPipeWrench.Handles
         private bool moved;
         private bool dragging;
         private bool removed;
+        private bool pointerOver;
+        private int dragEndedFrame = -1;
         private IDisposable undoScope;
         internal int Segment { get; private set; }
         internal void Initialize(PipeHandleManager manager, WorkspacePipe pipe, int segment)
@@ -31,11 +33,11 @@ namespace KingdomPipeWrench.Handles
         public void OnDrag(PointerEventData data) { }
         public void OnPointerClick(PointerEventData data)
         {
-            if (data.button == PointerEventData.InputButton.Right) RemoveMarker();
-            else if (data.button == PointerEventData.InputButton.Left && !dragging) Begin(false);
+            if (data.button == PointerEventData.InputButton.Right) { if (!dragging) RemoveMarker(); }
+            else if (data.button == PointerEventData.InputButton.Left && !dragging && !data.dragging && Time.frameCount != dragEndedFrame) Begin(false);
         }
         public void OnPointerDown(PointerEventData data)
-        { if (data.button == PointerEventData.InputButton.Right) RemoveMarker(); }
+        { if (data.button == PointerEventData.InputButton.Right && !dragging) RemoveMarker(); }
         private void RemoveMarker()
         { if (!removed) { removed = true; manager.Remove(this, pipe); } }
 
@@ -87,9 +89,15 @@ namespace KingdomPipeWrench.Handles
         {
             if (!dragging) return;
             if (moved && pipe?.World != null)
-            { manager.Plugin.Managed.Remap(pipe, plan); Segment = plan.Segment; }
+            {
+                manager.Plugin.Managed.Remap(pipe, plan);
+                Segment = plan.Segment;
+                manager.NotifyManualEdit(pipe);
+            }
             undoScope?.Dispose(); undoScope = null;
-            dragging = false; manager.Finished();
+            dragging = false; dragEndedFrame = Time.frameCount;
+            UpdateVisual();
+            manager.Finished();
         }
 
         public void OnDragDropCancel()
@@ -101,7 +109,9 @@ namespace KingdomPipeWrench.Handles
             }
             undoScope?.Dispose(); undoScope = null;
             if (ReferenceEquals(FoundationApi.DragDrop.Target, this)) FoundationApi.DragDrop.Clear();
-            dragging = false; manager.Finished();
+            dragging = false; dragEndedFrame = Time.frameCount;
+            UpdateVisual();
+            manager.Finished();
         }
 
         private void OnDestroy()
@@ -109,8 +119,13 @@ namespace KingdomPipeWrench.Handles
             undoScope?.Dispose();
             undoScope = null;
         }
-        public void OnPointerEnter(PointerEventData data) => GetComponent<Image>().color = new Color(0.75f, 0.52f, 0.15f, 1);
-        public void OnPointerExit(PointerEventData data) => GetComponent<Image>().color = new Color(0.24f, 0.19f, 0.09f, 0.95f);
+        public void OnPointerEnter(PointerEventData data) { pointerOver = true; UpdateVisual(); }
+        public void OnPointerExit(PointerEventData data) { pointerOver = false; UpdateVisual(); }
+        private void UpdateVisual()
+        {
+            var image = GetComponent<Image>();
+            if (image) image.color = pointerOver || dragging ? new Color(0.75f, 0.52f, 0.15f, 1) : new Color(0.24f, 0.19f, 0.09f, 0.95f);
+        }
         internal void UpdatePosition(IReadOnlyList<RoutePoint> path)
         {
             int index = dragging && moved ? plan.Segment : Segment;

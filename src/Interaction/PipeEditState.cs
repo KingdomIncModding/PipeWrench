@@ -16,6 +16,8 @@ namespace KingdomPipeWrench.Interaction
         public bool ShouldDismiss(int frame, bool clicked, bool overGrabber, bool draggingGrabber)
             => CanReadKeys(frame) && clicked && !overGrabber && !draggingGrabber;
         public void Cycle() { if (Active) Shape = RouteModes.Next(Shape); }
+        public void MarkManual() { if (Active) Shape = RouteShape.Freeform; }
+        public void Sync(RouteShape shape, int bends) { if (!Active) return; Shape = shape; Bends = RouteBendPlanner.Normalize(bends); }
         public void Adjust(int direction) { if (Active) Bends = RouteBendPlanner.Normalize(Bends + direction * 2); }
         public void Dismiss() => Active = false;
     }

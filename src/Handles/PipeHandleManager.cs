@@ -17,7 +17,8 @@ namespace KingdomPipeWrench.Handles
         private readonly ConnectedPipeEditor editor;
         private readonly List<PipeGrabMarker> markers = new List<PipeGrabMarker>();
         private WorkspacePipe shown;
-        private int nodeCount;
+        private Component shownWorld;
+        private int nodeCount, pathHash;
         private float nextSearch;
         private bool claimingRightClickUntilRelease;
         internal PipeGrabMarker Active;
@@ -59,14 +60,23 @@ namespace KingdomPipeWrench.Handles
             if (editor.Selected != null)
             {
                 var selected = editor.Selected;
-                if (selected != shown || selected.Nodes.Count != nodeCount) Show(selected);
+                if (NeedsRefresh(selected)) Show(selected);
                 UpdatePositions(); return;
             }
             if (Time.unscaledTime >= nextSearch)
             {
                 nextSearch = Time.unscaledTime + 0.06f;
-                var pipe = NearestPipe(false, out _);
-                if (pipe != shown || pipe != null && pipe.Nodes.Count != nodeCount) Show(pipe);
+                if (shown != null && IsPointerOverActiveMarker())
+                {
+                    if (shown.World == null) Clear();
+                    else if (NeedsRefresh(shown)) Show(shown);
+                }
+                else
+                {
+                    var pipe = NearestPipe(false, out _);
+                    if (pipe == null) { if (shown != null) Clear(); }
+                    else if (NeedsRefresh(pipe)) Show(pipe);
+                }
             }
             UpdatePositions();
         }
@@ -93,14 +103,37 @@ namespace KingdomPipeWrench.Handles
         internal WorkspacePipe NearestSection(out int markerKey) => NearestPipe(true, out markerKey);
         internal void Invalidate() => nodeCount = -1;
 
+        private bool NeedsRefresh(WorkspacePipe pipe)
+        {
+            if (pipe != shown || pipe.World != shownWorld || pipe.Nodes.Count != nodeCount || PathHash(pipe) != pathHash) return true;
+            for (int i = 0; i < markers.Count; i++) if (!markers[i]) return true;
+            return false;
+        }
+
+        private static int PathHash(WorkspacePipe pipe)
+        {
+            var nodes = pipe.Nodes;
+            int hash = nodes.Count;
+            for (int i = 0; i < nodes.Count; i++)
+                hash = unchecked(hash * 397 ^ nodes[i].x * 31 ^ nodes[i].y);
+            return hash;
+        }
+
         private void Show(WorkspacePipe pipe)
         {
             Clear(); shown = pipe;
             if (pipe?.World == null) return;
-            var nodes = pipe.Nodes; nodeCount = nodes.Count;
+            pipe.World.transform.SetAsLastSibling();
+            shownWorld = pipe.World;
+            var nodes = pipe.Nodes; nodeCount = nodes.Count; pathHash = PathHash(pipe);
             var full = WorkspaceGeometry.FullPath(pipe);
             bool straight = RouteGeometry.IsStraight(full);
-            if (straight && plugin.Managed.IsMarkerVisible(pipe, -1)) CreateMarker(pipe, -1);
+            if (straight)
+            {
+                if (!plugin.Managed.IsMarkerVisible(pipe, -1) && plugin.Managed.ShouldRestoreWholeStraight(pipe))
+                    plugin.Managed.RestoreMarker(pipe, -1);
+                if (plugin.Managed.IsMarkerVisible(pipe, -1)) CreateMarker(pipe, -1);
+            }
             else
                 for (int i = 0; i + 1 < full.Count; i++)
                 {
@@ -140,9 +173,10 @@ namespace KingdomPipeWrench.Handles
         {
             if (Active != null) Active.OnDragDropCancel();
             foreach (var marker in markers) if (marker) UnityEngine.Object.Destroy(marker.gameObject);
-            markers.Clear(); shown = null; nodeCount = 0;
+            markers.Clear(); shown = null; shownWorld = null; nodeCount = 0; pathHash = 0;
         }
         internal void BeginEdit(WorkspacePipe pipe) => editor.SelectExisting(pipe);
+        internal void NotifyManualEdit(WorkspacePipe pipe) { editor.MarkManual(); plugin.Managed.ClearAutoNodes(pipe?.ConnectedOutput); }
         internal void Remove(PipeGrabMarker marker, WorkspacePipe pipe)
         {
             claimingRightClickUntilRelease = true;

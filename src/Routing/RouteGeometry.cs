@@ -50,12 +50,12 @@ namespace KingdomPipeWrench.Routing
         {
             var a = new RoutePoint(snap != null && startDirection != 0 ? snap.BeyondX(start.X + startDirection, startDirection) : start.X + 24 * startDirection, start.Y);
             var b = new RoutePoint(snap != null && endDirection != 0 ? snap.BeyondX(end.X + endDirection, endDirection) : end.X + 24 * endDirection, end.Y);
-            int spine = Spine(a, b, shape);
-            if (snap != null) spine = snap.X(spine);
-            bool startFits = startDirection == 0 || (spine - start.X) * startDirection >= (snap == null ? 24 : 1);
-            bool endFits = endDirection == 0 || (spine - end.X) * endDirection >= (snap == null ? 24 : 1);
-            if (startFits && endFits)
+            if (start.Y != end.Y && TryTwoElbowSpine(start, end, a.X, b.X, startDirection, endDirection, shape, snap, out int spine))
                 return Simplify(new[] { start, new RoutePoint(spine, start.Y), new RoutePoint(spine, end.Y), end });
+            if (start.Y == end.Y && (startDirection == 0 || endDirection == 0 || (startDirection == -endDirection && (end.X - start.X) * startDirection >= 0)))
+                return Simplify(new[] { start, end });
+            if (start.Y == end.Y && startDirection == endDirection && a.X == b.X && snap != null)
+                b = new RoutePoint(snap.NextX(b.X, endDirection), b.Y);
             int laneY = start.Y == end.Y ? start.Y + 64 : start.Y + (end.Y - start.Y) / 2;
             if (shape == RouteShape.NearStart && start.Y != end.Y) laneY = start.Y + Math.Sign(end.Y - start.Y) * Math.Min(24, Math.Abs(end.Y - start.Y) / 2);
             if (shape == RouteShape.NearEnd && start.Y != end.Y) laneY = end.Y - Math.Sign(end.Y - start.Y) * Math.Min(24, Math.Abs(end.Y - start.Y) / 2);
@@ -63,18 +63,68 @@ namespace KingdomPipeWrench.Routing
             return Simplify(new[] { start, a, new RoutePoint(a.X, laneY), new RoutePoint(b.X, laneY), b, end });
         }
 
+        private static bool TryTwoElbowSpine(RoutePoint start, RoutePoint end, int ax, int bx, int startDirection, int endDirection,
+            RouteShape shape, RouteSnap snap, out int spine)
+        {
+            if (startDirection != 0 && startDirection == endDirection)
+            {
+                spine = startDirection > 0 ? Math.Max(ax, bx) : Math.Min(ax, bx);
+                return true;
+            }
+            if (startDirection != 0 && startDirection == -endDirection)
+            {
+                if ((end.X - start.X) * startDirection <= 0) { spine = 0; return false; }
+                int preferred = Spine(new RoutePoint(ax, start.Y), new RoutePoint(bx, end.Y), shape);
+                if (snap != null) preferred = snap.X(preferred);
+                if (FitsPort(preferred, start.X, startDirection, 1) && FitsPort(preferred, end.X, endDirection, 1))
+                { spine = preferred; return true; }
+                if (snap != null)
+                {
+                    int mid = snap.X(start.X + (end.X - start.X) / 2);
+                    foreach (int candidate in new[] { mid, ax, bx })
+                        if (FitsPort(candidate, start.X, startDirection, 1) && FitsPort(candidate, end.X, endDirection, 1))
+                        { spine = candidate; return true; }
+                }
+                if (Math.Abs(end.X - start.X) >= 2)
+                { spine = start.X + (end.X - start.X) / 2; return true; }
+                spine = 0; return false;
+            }
+            if (startDirection == 0 && endDirection == 0)
+            {
+                int raw = Spine(start, end, shape);
+                spine = snap != null ? snap.X(raw) : raw;
+                return true;
+            }
+            if (startDirection != 0)
+            {
+                int raw = Spine(new RoutePoint(ax, start.Y), end, shape);
+                int candidate = snap != null ? snap.X(raw) : raw;
+                spine = FitsPort(candidate, start.X, startDirection, 1) && (end.X - candidate) * startDirection >= 0 ? candidate : ax;
+                return true;
+            }
+            int rawEnd = Spine(start, new RoutePoint(bx, end.Y), shape);
+            int candidateEnd = snap != null ? snap.X(rawEnd) : rawEnd;
+            spine = FitsPort(candidateEnd, end.X, endDirection, 1) && (start.X - candidateEnd) * endDirection >= 0 ? candidateEnd : bx;
+            return true;
+        }
+
+        private static bool FitsPort(int x, int portX, int direction, int minDistance)
+            => direction == 0 || (long)(x - portX) * direction >= minDistance;
+
         /// <summary>Slide an internal segment; endpoints remain anchored and adjacent segments stay orthogonal.</summary>
         public static List<RoutePoint> StraightSlideNodes(RoutePoint start, RoutePoint end, RouteSnap snap = null)
         {
             if (start.Y != end.Y) throw new ArgumentException("Expected a horizontal port-to-port pipe.");
-            int distance = Math.Min(24, Math.Abs(end.X - start.X) / 3), direction = Math.Sign(end.X - start.X);
+            int length = Math.Abs(end.X - start.X);
+            if (length < 12) return null;
+            int distance = Math.Min(24, length / 3), direction = Math.Sign(end.X - start.X);
             var a = new RoutePoint(start.X + distance * direction, start.Y);
             var b = new RoutePoint(end.X - distance * direction, end.Y);
             if (snap != null)
             {
-                a = new RoutePoint(snap.BeyondX(start.X + direction, direction), start.Y);
-                b = new RoutePoint(snap.BeyondX(end.X - direction, -direction), end.Y);
-                if ((b.X - a.X) * direction <= 0) return null;
+                var sa = new RoutePoint(snap.BeyondX(start.X + direction, direction), start.Y);
+                var sb = new RoutePoint(snap.BeyondX(end.X - direction, -direction), end.Y);
+                if ((sb.X - sa.X) * direction > 0) { a = sa; b = sb; }
             }
             return new List<RoutePoint> { a, a, b, b };
         }

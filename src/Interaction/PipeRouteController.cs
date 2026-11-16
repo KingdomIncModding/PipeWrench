@@ -18,7 +18,7 @@ namespace KingdomPipeWrench.Interaction
         private List<RoutePoint> fixedNodes = new List<RoutePoint>();
         private RouteShape shape;
         private bool blocked;
-        private int lastKeyFrame = -1;
+        private int lastKeyFrame = -1, lastMoveFrame = -1;
         private int requestedBends = 2, actualBends;
         private bool announce;
         private bool startsAtInput;
@@ -29,6 +29,8 @@ namespace KingdomPipeWrench.Interaction
         private List<RoutePoint> cachedRoute;
         private List<RoutePoint> previewNodes;
         private Vector2Int previewEndpoint;
+        private WorkspacePort previewTarget;
+        private bool? tintedFailed;
         public bool IsRouting => drag != null && drag.IsActive && shape != RouteShape.Freeform;
         public bool HasActiveConnection => drag != null && drag.IsActive;
         public PipeRouteController(PipeWrenchPlugin plugin, ConnectedPipeEditor editor) { this.plugin = plugin; this.editor = editor; }
@@ -38,15 +40,19 @@ namespace KingdomPipeWrench.Interaction
             if (!call.OriginalRan || !plugin.Enabled.Value) return;
             Capture(FoundationApi.PipeDrag.FromView(call.View));
             if (drag == null) return;
+            lastMoveFrame = Time.frameCount;
             ReadHotkey();
             Apply(false);
-            if (announce)
-            {
-                announce = false;
-                FoundationApi.UiAccess.ShowStatusMessage(shape == RouteShape.Freeform ? "Pipe Wrench: Freeform"
-                    : "Pipe Wrench: " + RouteModes.Label(shape) + " — " + actualBends + " bends" + (actualBends != requestedBends ? " (requested " + requestedBends + ")" : "")
-                    + " — = / - adjust; Shift cycles avoidance");
-            }
+            AnnounceIfNeeded();
+        }
+
+        private void AnnounceIfNeeded()
+        {
+            if (!announce) return;
+            announce = false;
+            FoundationApi.UiAccess.ShowStatusMessage(shape == RouteShape.Freeform ? "Pipe Wrench: Freeform"
+                : "Pipe Wrench: " + RouteModes.Label(shape) + " — " + actualBends + " bends" + (actualBends != requestedBends ? " (requested " + requestedBends + ")" : "")
+                + " — = / - adjust; Shift cycles avoidance");
         }
 
         private void Capture(WorkspacePipeDrag current)
@@ -54,11 +60,14 @@ namespace KingdomPipeWrench.Interaction
             if (current == null || current.Pipe == pipe) return;
             Reset(); editor.Dismiss(); drag = current; pipe = current.Pipe; shape = RouteShape.Center;
             startsAtInput = drag.Start.IsInput;
-            requestedBends = RouteBendPlanner.Normalize(plugin.PreferredBends.Value);
+            requestedBends = 2;
             fixedNodes = pipe.Nodes.Select(WorkspaceGeometry.Point).ToList();
+            if (fixedNodes.Count > 0 && plugin.Managed.MatchesAutoNodes(drag.Start, fixedNodes))
+                fixedNodes.Clear();
             if (drag.Start.IsInput) fixedNodes.Reverse();
             var line = FoundationApi.WorkspaceVisuals.PipeLine(pipe.World);
             nativeStart = line.startColor; nativeEnd = line.endColor;
+            tintedFailed = null;
         }
 
         private void ReadHotkey()
@@ -72,10 +81,7 @@ namespace KingdomPipeWrench.Interaction
             bool decrease = Pressed(keyboard, plugin.DecreaseBendsKey.Value) || keyboard.numpadMinusKey.wasPressedThisFrame;
             if (toggle) shape = RouteModes.Next(shape);
             else if (shape != RouteShape.Freeform && increase != decrease)
-            {
                 requestedBends = RouteBendPlanner.Normalize(requestedBends + (increase ? 2 : -2));
-                plugin.PreferredBends.Value = requestedBends;
-            }
             else return;
             lastKeyFrame = Time.frameCount; cacheKey = null; announce = true;
         }
@@ -85,11 +91,14 @@ namespace KingdomPipeWrench.Interaction
         private void Apply(bool committing)
         {
             if (drag == null || !drag.IsAlive) return;
-            if (plugin.IsPointerOverToolbar)
-            { if (previewNodes != null) { WriteNodes(previewNodes, previewEndpoint); Tint(blocked); } return; }
-            var target = drag.HoveredPort;
-            var endpoint = target != null ? OptionalIntegrations.ConnectionPoint(target) : FoundationApi.UiAccess.MouseWorld;
-            if (target == null && shape != RouteShape.Freeform && Keyboard.current?.ctrlKey.isPressed == true)
+            bool overToolbar = !committing && plugin.IsPointerOverToolbar;
+            if (overToolbar && previewNodes != null && constraintMode == plugin.Avoidance.Value && cacheKey != null)
+            { Tint(blocked); return; }
+            var target = overToolbar ? previewTarget : drag.HoveredPort;
+            var endpoint = overToolbar && previewNodes != null ? previewEndpoint
+                : target != null ? OptionalIntegrations.ConnectionPoint(target) : FoundationApi.UiAccess.MouseWorld;
+            if (!overToolbar) previewTarget = target;
+            if (!overToolbar && target == null && shape != RouteShape.Freeform && Keyboard.current?.ctrlKey.isPressed == true)
                 endpoint = FoundationApi.NativeIO.SnapRouteNode(endpoint);
             if (shape == RouteShape.Freeform)
             {
@@ -105,7 +114,7 @@ namespace KingdomPipeWrench.Interaction
             { constraints = WorkspaceGeometry.Constraints(pipe, mode, plugin.Clearance.Value, terminalStart, end); constraintMode = mode; cacheKey = null; }
             else if (constraints.End != end)
                 constraints = new RouteConstraints(constraints.Buildings, constraints.Pipes, constraints.AvoidCrossings, terminalStart, end, constraints.Snap);
-            string key = start + "/" + end + "/" + startDirection + "/" + endDirection + "/" + shape + "/" + requestedBends + "/" + mode + "/" + constraints.Snap.Signature;
+            string key = start + "/" + end + "/" + startDirection + "/" + endDirection + "/" + shape + "/" + requestedBends + "/" + mode + "/" + plugin.Clearance.Value + "/" + constraints.Snap.Signature;
             if (key != cacheKey)
             {
                 cachedRoute = ObstacleRouter.Find(start, end, startDirection, endDirection, shape, constraints);
@@ -113,13 +122,13 @@ namespace KingdomPipeWrench.Interaction
                     cachedRoute = RouteBendPlanner.Plan(cachedRoute, requestedBends, constraints);
                 cacheKey = key;
             }
-            blocked = cachedRoute == null;
+            blocked = mode != AvoidanceMode.None && cachedRoute == null;
             var route = cachedRoute ?? RouteGeometry.Basic(start, end, startDirection, endDirection, shape, constraints.Snap);
             actualBends = RouteBendPlanner.Count(route);
             var nodes = new List<RoutePoint>(fixedNodes);
             for (int i = 1; i < route.Count - 1; i++) nodes.Add(route[i]);
             // Only the remaining section is routed; hand-placed waypoints retain their positions.
-            if (!blocked && fixedNodes.Count > 0)
+            if (!blocked && mode != AvoidanceMode.None && fixedNodes.Count > 0)
             {
                 var full = new List<RoutePoint> { terminalStart }; full.AddRange(nodes); full.Add(end);
                 blocked = !constraints.IsClear(full);
@@ -129,14 +138,17 @@ namespace KingdomPipeWrench.Interaction
 
         private void WriteNodes(IEnumerable<RoutePoint> nodes, Vector2Int endpoint)
         {
-            previewNodes = nodes.ToList(); previewEndpoint = endpoint;
+            var next = nodes as List<RoutePoint> ?? nodes.ToList();
+            if (previewNodes != null && previewEndpoint == endpoint && previewNodes.SequenceEqual(next)) return;
+            previewNodes = next; previewEndpoint = endpoint;
             var values = previewNodes.Select(WorkspaceGeometry.Vector).ToList();
             if (drag.Start.IsInput) values.Reverse();
             drag.SetPreview(values, endpoint);
         }
         private void Tint(bool failed)
         {
-            if (pipe?.World == null) return;
+            if (pipe?.World == null || tintedFailed == failed) return;
+            tintedFailed = failed;
             var line = FoundationApi.WorkspaceVisuals.PipeLine(pipe.World);
             line.startColor = failed ? Color.red : nativeStart;
             line.endColor = failed ? Color.red : nativeEnd;
@@ -170,6 +182,10 @@ namespace KingdomPipeWrench.Interaction
             if (pipe.ConnectedInput != null && pipe.ConnectedOutput != null)
             {
                 plugin.Managed.Add(pipe);
+                if (fixedNodes.Count == 0 && shape != RouteShape.Freeform)
+                    plugin.Managed.RecordAutoNodes(pipe.ConnectedOutput, pipe.Nodes.Select(WorkspaceGeometry.Point));
+                else
+                    plugin.Managed.ClearAutoNodes(pipe.ConnectedOutput);
                 editor.Select(pipe, shape, requestedBends, fixedNodes, startsAtInput);
             }
             Reset();
@@ -183,18 +199,22 @@ namespace KingdomPipeWrench.Interaction
                 if (drag.IsActive) { WriteNodes(fixedNodes, FoundationApi.UiAccess.MouseWorld); Tint(false); }
                 Reset();
             }
-            if (drag != null) { ReadHotkey(); Apply(false); }
+            if (drag != null)
+            {
+                ReadHotkey();
+                if (lastMoveFrame != Time.frameCount || lastKeyFrame == Time.frameCount) { Apply(false); AnnounceIfNeeded(); }
+            }
         }
         public void Cancel(GameHookCall call) => Reset();
         private void Reset()
         {
             Tint(false); drag = null; pipe = null; shape = RouteShape.Freeform;
-            fixedNodes.Clear(); constraints = null; cacheKey = null; cachedRoute = null; previewNodes = null; blocked = false;
-            announce = false; actualBends = 0;
+            fixedNodes.Clear(); constraints = null; cacheKey = null; cachedRoute = null; previewNodes = null; previewTarget = null; blocked = false;
+            announce = false; actualBends = 0; tintedFailed = null; lastMoveFrame = -1;
         }
         public void Dispose()
         {
-            if (drag != null && drag.IsActive) WriteNodes(fixedNodes, FoundationApi.UiAccess.MouseWorld);
+            if (drag != null && drag.IsActive && pipe?.World != null) WriteNodes(fixedNodes, previewEndpoint);
             Reset();
         }
     }

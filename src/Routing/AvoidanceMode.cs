@@ -1,4 +1,4 @@
 namespace KingdomPipeWrench.Routing
 {
-    internal enum AvoidanceMode { Buildings, Overlap, BuildingsAndOverlap, Strict }
+    internal enum AvoidanceMode { None, Buildings, Overlap, BuildingsAndOverlap, Strict }
 }

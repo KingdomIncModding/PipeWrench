@@ -17,13 +17,15 @@ namespace KingdomPipeWrench.Plugin
     [BepInDependency("urakka.kingdominc.rightclickfix", BepInDependency.DependencyFlags.SoftDependency)]
     public sealed class PipeWrenchPlugin : BaseUnityPlugin
     {
-        public const string Id = "urakka.kingdominc.pipewrench", Version = "0.1.9";
+        public const string Id = "urakka.kingdominc.pipewrench", Version = "0.1.10";
         internal ConfigEntry<bool> Enabled, ShowHandles;
         internal ConfigEntry<Key> RouteKey, IncreaseBendsKey, DecreaseBendsKey;
         internal ConfigEntry<int> Clearance, PreferredBends;
         internal ConfigEntry<AvoidanceMode> Avoidance;
         private PipeToolbar toolbar;
         private int avoidanceKeyFrame = -1;
+        private bool shiftTapPending;
+        private float shiftTapTime;
         internal bool IsPointerOverToolbar => toolbar?.IsPointerOver == true;
         internal bool ShowTools => PipeToolVisibility.Show(Enabled.Value, FoundationApi.UiAccess.IsWorkspaceVisible,
             FoundationApi.UiAccess.IsMenuVisible, routing?.HasActiveConnection == true, editor?.Selected != null, inserter?.IsActive == true);
@@ -41,12 +43,12 @@ namespace KingdomPipeWrench.Plugin
             RouteKey = Config.Bind("Input", "CycleRoute", Key.P, "Cycle Center, Near Start, Near End and Freeform while dragging or editing the selected pipe. Alt+P activates Grab Inserter.");
             IncreaseBendsKey = Config.Bind("Input", "IncreaseBends", Key.Equals, "Add two bends while Pipe Wrench is active. Numpad + also works.");
             DecreaseBendsKey = Config.Bind("Input", "DecreaseBends", Key.Minus, "Remove two requested bends while Pipe Wrench is active. Numpad - also works.");
-            PreferredBends = Config.Bind("Routing", "PreferredBends", 2, new ConfigDescription("Requested bend count, adjusted in pairs with = and -. Geometry or avoidance may require a different count.", new AcceptableValueRange<int>(2, 12)));
+            PreferredBends = Config.Bind("Routing", "PreferredBends", 2, new ConfigDescription("Legacy bend preference (connections always start at 2 elbows; = and - adjust the active pipe).", new AcceptableValueRange<int>(2, 12)));
             Clearance = Config.Bind("Routing", "BuildingClearance", 8, new ConfigDescription("Clearance around buildings in world units.", new AcceptableValueRange<int>(0, 12)));
-            Avoidance = Config.Bind("Routing", "Avoidance", AvoidanceMode.Buildings, "Shift cycles Buildings, Overlap (crossing allowed), BuildingsAndOverlap (crossing allowed), Strict (also avoids crossings).");
+            Avoidance = Config.Bind("Routing", "Avoidance", AvoidanceMode.None, "Tap Shift cycles None, Buildings, Overlap (crossing allowed), BuildingsAndOverlap (crossing allowed), Strict (also avoids crossings).");
             Managed = new ManagedPipes();
             foundation = FoundationApi.ForMod(Id);
-            var settings = foundation.Settings("Pipe Wrench", "Right angles by default. P cycles modes; = / - adjust bends; Shift cycles avoidance rules. Alt+P inserts section sliders; right-click removes them.");
+            var settings = foundation.Settings("Pipe Wrench", "2-elbow routing by default (no constraints). Select a constraint on the toolbar or tap Shift to route around obstacles. P cycles modes; = / - adjust bends; Alt+P inserts section sliders.");
             settings.AddToggle("Enabled", Enabled.Value, value => Enabled.Value = value, getter: () => Enabled.Value);
             settings.AddToggle("Grab markers", ShowHandles.Value, value => ShowHandles.Value = value, getter: () => ShowHandles.Value);
             editor = new ConnectedPipeEditor(this);
@@ -66,6 +68,8 @@ namespace KingdomPipeWrench.Plugin
         {
             if (ShowTools || handles?.Active != null)
                 ReadAvoidanceInput();
+            else
+                shiftTapPending = false;
             routing?.Tick();
             inserter?.Tick();
             if (editor != null && handles != null) editor.Tick(handles.IsPointerOverMarker() || IsPointerOverToolbar, handles.Active != null);
@@ -79,12 +83,28 @@ namespace KingdomPipeWrench.Plugin
         internal void ReadAvoidanceInput()
         {
             var keys = Keyboard.current;
-            if (keys == null || avoidanceKeyFrame == Time.frameCount || !Enabled.Value
-                || !FoundationApi.UiAccess.IsWorkspaceVisible || !FoundationApi.UiAccess.IsGameInputEnabled
-                || FoundationApi.UiAccess.IsMenuVisible || keys.ctrlKey.isPressed || keys.altKey.isPressed) return;
-            if (!keys.leftShiftKey.wasPressedThisFrame && !keys.rightShiftKey.wasPressedThisFrame) return;
+            if (keys == null || avoidanceKeyFrame == Time.frameCount) return;
             avoidanceKeyFrame = Time.frameCount;
-            SetAvoidance(AvoidanceRules.Next(Avoidance.Value));
+            if (!Enabled.Value || !FoundationApi.UiAccess.IsWorkspaceVisible
+                || !FoundationApi.UiAccess.IsGameInputEnabled || FoundationApi.UiAccess.IsMenuVisible
+                || keys.ctrlKey.isPressed || keys.altKey.isPressed)
+            { shiftTapPending = false; return; }
+            bool shiftPressed = keys.leftShiftKey.wasPressedThisFrame || keys.rightShiftKey.wasPressedThisFrame;
+            bool shiftReleased = keys.leftShiftKey.wasReleasedThisFrame || keys.rightShiftKey.wasReleasedThisFrame;
+            bool shiftDown = keys.leftShiftKey.isPressed || keys.rightShiftKey.isPressed;
+            if (shiftPressed) { shiftTapPending = true; shiftTapTime = Time.unscaledTime; }
+            if (!shiftTapPending) return;
+            var mouse = Mouse.current;
+            bool mouseClick = mouse != null && (mouse.leftButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame || mouse.middleButton.wasPressedThisFrame);
+            if (mouseClick || (!shiftPressed && keys.anyKey.wasPressedThisFrame)) { shiftTapPending = false; return; }
+            if (shiftReleased)
+            {
+                shiftTapPending = false;
+                if (Time.unscaledTime - shiftTapTime <= 0.45f)
+                    SetAvoidance(AvoidanceRules.Next(Avoidance.Value));
+            }
+            else if (!shiftDown)
+                shiftTapPending = false;
         }
         internal void SetAvoidance(AvoidanceMode mode)
         {

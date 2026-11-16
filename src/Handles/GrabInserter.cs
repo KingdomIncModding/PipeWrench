@@ -29,8 +29,11 @@ namespace KingdomPipeWrench.Handles
                 FoundationApi.UiAccess.ShowStatusMessage(active ? "Grab Inserter: click a pipe section to add a center slider. Alt+P or right-click cancels." : "Grab Inserter: off");
             }
             if (!active) return;
-            if (mouse.rightButton.wasPressedThisFrame) { active = false; return; }
-            if (!mouse.leftButton.wasPressedThisFrame || keyboard.ctrlKey.isPressed || plugin.IsPointerOverToolbar || FoundationApi.UiAccess.IsPointerOverPort) return;
+            if (mouse.rightButton.wasPressedThisFrame || keyboard.escapeKey.wasPressedThisFrame)
+            { active = false; FoundationApi.UiAccess.ShowStatusMessage("Grab Inserter: off"); return; }
+            if (!mouse.leftButton.wasPressedThisFrame || keyboard.ctrlKey.isPressed || plugin.IsPointerOverToolbar
+                || FoundationApi.UiAccess.IsPointerOverPort || FoundationApi.UiAccess.IsPointerOverNonWorkspaceUi
+                || FoundationApi.UiAccess.IsPointerOverButton) return;
             var pipe = handles.NearestSection(out int segment);
             if (pipe == null)
             { FoundationApi.UiAccess.ShowPointerWarning("Grab Inserter: click directly on a pipe section."); return; }

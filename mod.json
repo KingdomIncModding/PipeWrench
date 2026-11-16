@@ -1,7 +1,7 @@
 {
   "id": "PipeWrench",
   "name": "Pipe Wrench",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "author": "Urakka",
   "description": "For Kingdom Inc 1.0.14. Right-angle routing, section sliders on vanilla and tool-laid pipes, Shift-cycled avoidance rules, and a compact toolbar.",
   "repository": {

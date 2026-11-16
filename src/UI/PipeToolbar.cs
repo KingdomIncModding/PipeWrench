@@ -23,6 +23,8 @@ namespace KingdomPipeWrench.UI
         private readonly Image[] buttons = new Image[4];
         private readonly TMP_Text[] labels = new TMP_Text[4];
         private readonly Vector3[] corners = new Vector3[4];
+        private AvoidanceMode? renderedMode;
+        private bool wasVisible;
         public PipeToolbar(PipeWrenchPlugin plugin) { this.plugin = plugin; }
         public bool IsPointerOver
         {
@@ -43,11 +45,19 @@ namespace KingdomPipeWrench.UI
                 if (anchor) Build();
             }
             if (!root) return;
-            root.gameObject.SetActive(plugin.ShowTools);
-            Position();
+            if (!plugin.ShowTools)
+            {
+                if (wasVisible || root.gameObject.activeSelf) { root.gameObject.SetActive(false); wasVisible = false; }
+                return;
+            }
+            bool becameVisible = !wasVisible;
+            if (becameVisible) { root.gameObject.SetActive(true); wasVisible = true; }
+            Position(becameVisible);
+            if (renderedMode == plugin.Avoidance.Value) return;
+            renderedMode = plugin.Avoidance.Value;
             for (int i = 0; i < buttons.Length; i++)
             {
-                bool active = (int)plugin.Avoidance.Value == i;
+                bool active = (int)renderedMode.Value == i + 1;
                 var sprite = active ? selected : dark;
                 if (sprite) { buttons[i].sprite = sprite; buttons[i].type = Image.Type.Sliced; buttons[i].color = Color.white; }
                 else buttons[i].color = active ? new Color(.78f, .61f, .32f) : new Color(.32f, .28f, .25f);
@@ -71,7 +81,9 @@ namespace KingdomPipeWrench.UI
                 var view = CreateVisual(node, root);
                 if (node.type == "group") BindRule(node, view);
             }
-            Position();
+            renderedMode = null; wasVisible = false;
+            Position(true);
+            root.gameObject.SetActive(false);
         }
         private RectTransform CreateVisual(ToolbarNode node, RectTransform parent)
         {
@@ -112,10 +124,12 @@ namespace KingdomPipeWrench.UI
             labels[index] = rect.GetComponentInChildren<TMP_Text>();
             var button = rect.gameObject.AddComponent<Button>(); button.targetGraphic = image;
             button.navigation = new Navigation { mode = Navigation.Mode.None };
-            button.onClick.AddListener(() => { plugin.SetAvoidance((AvoidanceMode)index); FoundationApi.UiAccess.PlaySound(GameUiSound.Button); });
+            var mode = (AvoidanceMode)(index + 1);
+            button.onClick.AddListener(() => { plugin.SetAvoidance(plugin.Avoidance.Value == mode ? AvoidanceMode.None : mode); FoundationApi.UiAccess.PlaySound(GameUiSound.Button); });
             var trigger = rect.gameObject.AddComponent<EventTrigger>();
             var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            enter.callback.AddListener(_ => FoundationApi.UiAccess.ShowStatusMessage("Pipe Wrench: " + AvoidanceRules.Label((AvoidanceMode)index) + " — Shift cycles rules"));
+            enter.callback.AddListener(_ => FoundationApi.UiAccess.ShowStatusMessage(
+                "Pipe Wrench: " + AvoidanceRules.Label(mode) + (plugin.Avoidance.Value == mode ? " (click to clear; Shift cycles)" : " — click to enable; Shift cycles")));
             trigger.triggers.Add(enter);
         }
         private static Color Ink(string hex) => ColorUtility.TryParseHtmlString(hex, out var color) ? color : Color.white;
@@ -125,7 +139,7 @@ namespace KingdomPipeWrench.UI
             rect.anchorMin = rect.anchorMax = rect.pivot = new Vector2(0, 1);
             rect.anchoredPosition = new Vector2(x, -y); rect.sizeDelta = new Vector2(width, height); return rect;
         }
-        private void Position()
+        private void Position(bool bringToFront)
         {
             anchor.GetWorldCorners(corners);
             var parent = (RectTransform)root.parent;
@@ -133,9 +147,9 @@ namespace KingdomPipeWrench.UI
             float available = Mathf.Max(1, parent.rect.width - layout.x * 2);
             root.localScale = Vector3.one * Mathf.Min(1, available / layout.w);
             root.anchoredPosition = new Vector2(layout.x, bottom - parent.rect.yMax - 4);
-            root.SetAsLastSibling();
+            if (bringToFront) root.SetAsLastSibling();
         }
         public void Dispose()
-        { if (root) UnityEngine.Object.Destroy(root.gameObject); root = null; anchor = null; }
+        { if (root) UnityEngine.Object.Destroy(root.gameObject); root = null; anchor = null; renderedMode = null; wasVisible = false; }
     }
 }

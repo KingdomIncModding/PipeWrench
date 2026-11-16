@@ -55,6 +55,8 @@ namespace KingdomPipeWrench.Verification
             edit.Adjust(1); Check(edit.Bends == 6, "Connected-pipe bend increase stays available");
             edit.Touch(12); Check(!edit.ShouldDismiss(12, true, false, false), "Removing a grabber does not dismiss the remaining markers on the same click");
             edit.Dismiss(); edit.Cycle(); Check(!edit.Active && edit.Shape == RouteShape.Center, "P cannot change a dismissed selection");
+            edit.Begin(13, RouteShape.Center, 4); edit.MarkManual(); Check(edit.Shape == RouteShape.Freeform, "Manual slider edit transitions selected pipe to Freeform");
+            edit.Dismiss();
 
             var session = new object(); var pipeIdentity = new object();
             var grabs = new SessionGrabbers<object>(); grabs.SetSession(session);
@@ -114,7 +116,18 @@ namespace KingdomPipeWrench.Verification
                         Validate(route, start, backwards, empty, "Mirrored/backward " + from + to + shape);
                         Check((route[1].X - start.X) * from > 0, "Exits start port outward");
                         Check((route[route.Count - 2].X - backwards.X) * to > 0, "Enters destination from outside");
+                        if (from == to || from == -1) Check(RouteBendPlanner.Count(route) == 2, "Two-elbow route for " + from + "/" + to + "/" + shape);
                     }
+            var openEnd = RouteGeometry.Basic(start, new RoutePoint(-80, 120), 1, 0, RouteShape.Center);
+            Validate(openEnd, start, new RoutePoint(-80, 120), empty, "Open-end drag behind start port");
+            Check(RouteBendPlanner.Count(openEnd) == 2, "Open-end drag behind start port uses 2 elbows");
+            var closeFacing = RouteGeometry.Basic(start, new RoutePoint(20, 120), 1, -1, RouteShape.Center);
+            Validate(closeFacing, start, new RoutePoint(20, 120), empty, "Close facing ports");
+            Check(RouteBendPlanner.Count(closeFacing) == 2, "Close facing ports use 2 elbows");
+            var tightCorridor = new[] { new RouteObstacle(16, 16, 120, 120), new RouteObstacle(16, -120, 120, -16) };
+            var corridorRoute = ObstacleRouter.Find(start, new RoutePoint(200, 0), 1, -1, RouteShape.Center, tightCorridor);
+            Validate(corridorRoute, start, new RoutePoint(200, 0), tightCorridor, "Straight exit corridor through obstacles");
+            Check(corridorRoute.Count == 2, "Router continues horizontally out of port stub when clear");
 
             var corners = new[] { new RoutePoint(160, 0), new RoutePoint(160, 160) };
             var moved = RouteGeometry.Slide(corners, 0, 200);

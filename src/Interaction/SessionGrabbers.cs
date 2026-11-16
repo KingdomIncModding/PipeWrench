@@ -38,6 +38,10 @@ namespace KingdomPipeWrench.Interaction
             => pipe != null && states.TryGetValue(pipe, out var state) && !state.Hidden.Contains(segment)
                 && (allowAutomatic && state.Automatic || state.Inserted.Contains(segment));
 
+        public bool ShouldRestoreWholeStraight(T pipe)
+            => pipe != null && states.TryGetValue(pipe, out var state)
+                && !state.Automatic && state.Inserted.Count > 0 && !state.Hidden.Contains(-1);
+
         public void Hide(T pipe, int segment)
         {
             if (pipe != null && states.TryGetValue(pipe, out var state)) state.Hidden.Add(segment);
