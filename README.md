@@ -1,6 +1,6 @@
 # Pipe Wrench
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/urakkaamyx/tip)
+[![Support on Ko-fi](https://raw.githubusercontent.com/KingdomIncModding/.github/main/assets/kofi-button.png)](https://ko-fi.com/urakkaamyx/tip)
 
 Draw tidy right-angle pipes and slide their straight sections with grab markers.
 
@@ -59,6 +59,4 @@ Close the game and remove `BepInEx/plugins/PipeWrench/`. Existing pipe shapes re
 
 ## Support
 
-If you enjoy these Kingdom Inc mods and tools, consider supporting development on Ko-fi!
-
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/urakkaamyx/tip)
+If you enjoy these Kingdom Inc mods and tools, consider supporting development on [**Ko-fi**](https://ko-fi.com/urakkaamyx/tip)!
